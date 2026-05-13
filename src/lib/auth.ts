@@ -12,19 +12,36 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.error("Auth: Missing credentials");
+            return null;
+          }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+          console.log(`Auth: Attempting login for ${credentials.email}`);
 
-        if (!user) return null;
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+          if (!user) {
+            console.error(`Auth: User ${credentials.email} not found`);
+            return null;
+          }
 
-        if (!isValid) return null;
+          const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
 
-        return { id: user.id, email: user.email, name: user.name };
+          if (!isValid) {
+            console.error(`Auth: Invalid password for ${credentials.email}`);
+            return null;
+          }
+
+          console.log(`Auth: Successful login for ${credentials.email}`);
+          return { id: user.id, email: user.email, name: user.name };
+        } catch (error) {
+          console.error("Auth: Exception in authorize function:", error);
+          return null;
+        }
       },
     }),
   ],
