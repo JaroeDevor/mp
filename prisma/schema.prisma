@@ -1,0 +1,74 @@
+// Schema de la app de prospección para motomensajería
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  prospects    Prospect[]
+}
+
+model Prospect {
+  id              String       @id @default(cuid())
+  businessName    String
+  category        String       // rubro del negocio
+  email           String?      // puede no tener
+  phone           String?      // teléfono extraído
+  whatsapp        String?      // link de whatsapp extraído
+  instagram       String?      // perfil de instagram
+  website         String?
+  address         String?
+  zone            String       // CABA | ZONA_NORTE
+  subZone         String?      // Palermo, San Isidro, etc
+  source          String       @default("GOOGLE_PLACES")
+  placeId         String?      @unique // Google Places ID para deduplicación
+  score           Int          @default(0) // 0-100
+  status          String       @default("PENDING") // PENDING | APPROVED | SENT | DISCARDED | REPLIED | CLIENT
+  notes           String?      // notas manuales del usuario
+  foundAt         DateTime     @default(now())
+  lastContactedAt DateTime?
+  assignedToId    String?
+  assignedTo      User?        @relation(fields: [assignedToId], references: [id])
+  emailDrafts     EmailDraft[]
+
+  @@index([status])
+  @@index([zone])
+  @@index([score])
+}
+
+model EmailDraft {
+  id           String    @id @default(cuid())
+  prospectId   String
+  prospect     Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  subject      String
+  body         String
+  templateUsed String?
+  edited       Boolean   @default(false)
+  generatedAt  DateTime  @default(now())
+  approvedAt   DateTime?
+  sentAt       DateTime?
+}
+
+model SearchConfig {
+  id             String   @id @default(cuid())
+  query          String   // ej: "tienda de ropa"
+  zone           String   // CABA | ZONA_NORTE
+  subZone        String?  // sub-zona específica
+  latitude       Float
+  longitude      Float
+  radiusMeters   Int      @default(3000)
+  active         Boolean  @default(true)
+  lastRunAt      DateTime?
+  prospectsFound Int      @default(0)
+  createdAt      DateTime @default(now())
+}
